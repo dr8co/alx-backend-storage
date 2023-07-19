@@ -58,25 +58,19 @@ def replay(method: Callable) -> Callable:
     """
     display the history of calls of a particular function.
     """
+    r = redis.Redis()
     key = method.__qualname__
-    # i = "".join([key, ":inputs"])
-    # o = "".join([key, ":outputs"])
+    i = "".join([key, ":inputs"])
+    o = "".join([key, ":outputs"])
+    count = r.get(key).decode('utf-8')
 
-    @wraps(method)
-    def wrapper(self, *args, **kwargs):
-        """
-        A wrapper function that will display the history
-        of calls of a particular function.
-        """
-        count = self._redis.get(key).decode("utf-8")
-        print(f"{key} was called {count} times:")
-        inputs = self._redis.lrange(i, 0, -1)
-        outputs = self._redis.lrange(o, 0, -1)
-        for i, o in zip(inputs, outputs):
-            print(f"{key}(*{i.decode('utf-8')}) -> {o.decode('utf-8')}")
-        return method(self, *args, **kwargs)
+    print(f"{key} was called {count} times:")
 
-    return wrapper
+    inputs = r.lrange(i, 0, -1)
+    outputs = r.lrange(o, 0, -1)
+
+    for k, v in zip(inputs, outputs):
+        print(f"{key}(*{k.decode('utf-8')}) -> {v.decode('utf-8')}")
 
 
 class Cache:
