@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-A redis model
+An expiring web cache and tracker
 """
 
 import redis
@@ -8,34 +8,33 @@ import requests
 from typing import Callable
 from functools import wraps
 
-redis = redis.Redis()
+redis_ = redis.Redis()
 
 
-def wrap_requests(fn: Callable) -> Callable:
+def count_requests(method: Callable) -> Callable:
     """
-    Wrap requests
+    Count the number of requests
     """
-
-    @wraps(fn)
+    @wraps(method)
     def wrapper(url):
         """
-        Wrapper function
+        A wrapper function that will count the number of requests
         """
-        redis.incr(f"count:{url}")
-        cached_response = redis.get(f"cached:{url}")
-        if cached_response:
-            return cached_response.decode('utf-8')
-        result = fn(url)
-        redis.setex(f"cached:{url}", 10, result)
-        return result
+        redis_.incr(f"count:{url}")
+        cached_html = redis_.get(f"cached:{url}")
+        if cached_html:
+            return cached_html.decode('utf-8')
+        html = method(url)
+        redis_.setex(f"cached:{url}", 10, html)
+        return html
 
     return wrapper
 
 
-@wrap_requests
+@count_requests
 def get_page(url: str) -> str:
     """
-    Get page
+    get_page function
     """
-    response = requests.get(url)
-    return response.text
+    req = requests.get(url)
+    return req.text
